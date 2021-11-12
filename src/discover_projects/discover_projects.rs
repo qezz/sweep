@@ -5,10 +5,11 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use crossbeam::queue::SegQueue;
 use yansi::Color;
 
+use crate::config::Config;
 use crate::output;
 use crate::utils::process_queue;
 use crate::Project;
-use crate::Settings;
+use crate::Args;
 
 use super::detect_cleanable_project::detect_cleanable_project;
 
@@ -22,7 +23,7 @@ use super::detect_cleanable_project::detect_cleanable_project;
 ///
 /// # Returns
 /// A queue containing all discovered projects
-pub fn discover_projects(settings: &Settings) -> Option<SegQueue<Project>> {
+pub fn discover_projects(settings: &Args, config: &Config) -> Option<SegQueue<Project>> {
     // Will contain a queue of paths that still need to be processed
     let path_queue = SegQueue::new();
 
@@ -41,10 +42,10 @@ pub fn discover_projects(settings: &Settings) -> Option<SegQueue<Project>> {
     // will finish faster and there will be less risk of threads timing out
     // before all paths have been processed.
     for path in &settings.paths {
-        if let Some(project) = detect_cleanable_project(&path) {
+        if let Some(project) = detect_cleanable_project(&path, &config) {
             discovered.push(project);
         } else {
-            discover_projects_in_directory(&path, &settings, &path_queue, &discovered);
+            discover_projects_in_directory(&path, &settings, &config, &path_queue, &discovered);
         }
     }
 
@@ -65,7 +66,7 @@ pub fn discover_projects(settings: &Settings) -> Option<SegQueue<Project>> {
                 output::print("Searching", Color::Cyan, path.to_str().unwrap_or(""));
 
                 total_paths.fetch_add(1, Ordering::SeqCst);
-                discover_projects_in_directory(&path, &settings, &path_queue, &discovered);
+                discover_projects_in_directory(&path, &settings, &config, &path_queue, &discovered);
             },
             |tries| {
                 output::print("Searching", Color::Cyan, &".".repeat(tries));
@@ -99,7 +100,8 @@ pub fn discover_projects(settings: &Settings) -> Option<SegQueue<Project>> {
 /// `discovered` - Identified cleanable projects will be added to this queue
 fn discover_projects_in_directory(
     path: &Path,
-    settings: &Settings,
+    settings: &Args,
+    config: &Config,
     path_queue: &SegQueue<PathBuf>,
     discovered: &SegQueue<Project>,
 ) {
@@ -124,7 +126,7 @@ fn discover_projects_in_directory(
 
     // Go over all subdirectories in the given directory and check if they're cleanable
     for path in read_dir {
-        if let Some(project) = detect_cleanable_project(&path) {
+        if let Some(project) = detect_cleanable_project(&path, &config) {
             discovered.push(project);
         } else {
             path_queue.push(path);

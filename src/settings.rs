@@ -4,23 +4,27 @@ use dunce::canonicalize;
 use regex::Regex;
 use structopt::StructOpt;
 
-pub enum SettingsError {
+pub enum ArgsError {
     InvalidPath(PathBuf),
 }
 
-pub type Result<T> = std::result::Result<T, SettingsError>;
+pub type Result<T> = std::result::Result<T, ArgsError>;
 
 /// Deletes unnecessary build artifacts and dependency directories in your projects.
 ///
 /// Detects Rust, Java and NodeJS projects by default, or define your own cleanable directories by adding a `.cleanuprc` file to your project directory.
 ///
 /// Questions, bugs & other issues: https://github.com/woubuc/sweep/issues
-#[derive(Debug, StructOpt)]
-pub struct Settings {
+#[derive(Clone, Debug, StructOpt)]
+pub struct Args {
     /// One or more directories where `swp` should start searching for projects.
     /// Defaults to the current working directory if no paths are given.
     #[structopt(name = "PATH...")]
     pub paths: Vec<PathBuf>,
+
+    /// Config
+    #[structopt(long = "config")]
+    pub config: PathBuf,
 
     /// Sweep even projects that were modified within the last 30 days.
     #[structopt(short = "a", long = "all")]
@@ -35,10 +39,10 @@ pub struct Settings {
     pub force: bool,
 }
 
-impl Settings {
+impl Args {
     /// Gets a Settings struct from the CLI arguments
-    pub fn get() -> Result<Settings> {
-        let mut settings: Settings = Settings::from_args();
+    pub fn get() -> Result<Args> {
+        let mut settings: Args = Args::from_args();
 
         settings.validate()?;
 
@@ -55,12 +59,16 @@ impl Settings {
             self.paths.push(".".into());
         }
 
+        if !self.config.exists() {
+            panic!("config file does not exist");
+        }
+
         // Resolve to absolute paths
         self.paths = {
             let paths: Result<Vec<PathBuf>> = self
                 .paths
                 .iter()
-                .map(|p| canonicalize(p).map_err(|_| SettingsError::InvalidPath(p.clone())))
+                .map(|p| canonicalize(p).map_err(|_| ArgsError::InvalidPath(p.clone())))
                 .collect();
 
             paths?
@@ -101,7 +109,7 @@ mod tests {
 
     #[test]
     fn valid_settings() {
-        let mut settings = Settings {
+        let mut settings = Args {
             paths: vec![],
             all: false,
             ignore: None,
@@ -117,7 +125,7 @@ mod tests {
 
     #[test]
     fn invalid_path() {
-        let mut settings = Settings {
+        let mut settings = Args {
             paths: vec!["./this_path_does_not_exist_1".into()],
             all: false,
             ignore: None,
@@ -131,14 +139,14 @@ mod tests {
         );
 
         match validate.unwrap_err() {
-            SettingsError::InvalidPath(_) => (),
+            ArgsError::InvalidPath(_) => (),
             _ => panic!("Unexpected error returned"),
         }
     }
 
     #[test]
     fn ignore_flag() {
-        let settings = Settings {
+        let settings = Args {
             paths: vec![],
             all: false,
             ignore: Some(Regex::new("src").unwrap()),

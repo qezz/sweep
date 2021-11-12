@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use crate::config::Config;
 use crate::utils::file_utils::exists_in_path;
 use crate::Project;
 
@@ -11,7 +12,7 @@ use crate::Project;
 ///
 /// # Returns
 /// The identified project, or None if the given path is not a project
-pub fn detect_cleanable_project(path: &Path) -> Option<Project> {
+pub fn detect_cleanable_project(path: &Path, config: &Config) -> Option<Project> {
     // A project can only be a directory
     if !path.is_dir() {
         return None;
@@ -25,6 +26,7 @@ pub fn detect_cleanable_project(path: &Path) -> Option<Project> {
 
     for filename in [".swpfile", ".cleanuprc"].iter() {
         if exists_in_path(path, filename) {
+            project.with_type("sweep-file".into());
             project.load_swpfile(filename);
 
             // If a .swpfile file is found, it overrides the default paths so we can return early
@@ -32,27 +34,18 @@ pub fn detect_cleanable_project(path: &Path) -> Option<Project> {
         }
     }
 
-    // Rust projects
-    if exists_in_path(path, "Cargo.toml") {
-        is_project = true;
-        project.add_cleanable_dir_if_exists("target");
-    }
+    // Check config entries
+    for entry in &config.entries {
+        dbg!(entry);
 
-    // Node.js projects
-    if exists_in_path(path, "package.json") {
-        is_project = true;
-        project.add_cleanable_dir_if_exists("node_modules");
-        project.add_cleanable_dir_if_exists(".cache");
-        project.add_cleanable_dir_if_exists("build");
-        project.add_cleanable_dir_if_exists("dist");
-    }
+        if exists_in_path(path, &entry.trigger) {
+            is_project = true;
+            project.with_type(entry.name.clone());
 
-    // Java projects
-    if exists_in_path(path, "pom.xml") {
-        is_project = true;
-        project.add_cleanable_dir_if_exists("target");
-        project.add_cleanable_dir_if_exists(".gradle");
-        project.add_cleanable_dir_if_exists("build");
+            for d in &entry.disposables {
+                project.add_cleanable_dir_if_exists(d);
+            }
+        }
     }
 
     if is_project {

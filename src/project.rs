@@ -14,6 +14,8 @@ pub struct Project {
 
     /// Timestamp indicating when the project was last modified
     last_modified: u64,
+
+    typ: Option<String>,
 }
 
 impl Project {
@@ -26,7 +28,16 @@ impl Project {
             root: root.into(),
             dependency_dirs: Vec::new(),
             last_modified: 0,
+            typ: None,
         }
+    }
+
+    pub fn with_type(&mut self, typ: String) {
+        self.typ = Some(typ.clone());
+    }
+
+    pub fn typ(&self) -> String {
+        self.typ.clone().unwrap_or("".to_string())
     }
 
     pub fn root(&self) -> &Path {

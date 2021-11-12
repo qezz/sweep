@@ -5,7 +5,7 @@ use yansi::Color;
 
 use crate::output;
 use crate::Project;
-use crate::Settings;
+use crate::Args;
 
 use super::filter_by_modified_date::filter_by_modified_date;
 
@@ -17,7 +17,7 @@ use super::filter_by_modified_date::filter_by_modified_date;
 ///
 /// # Returns
 /// All discovered cleanable directories
-pub fn analyse_projects(projects: SegQueue<Project>, settings: &Settings) -> Vec<PathBuf> {
+pub fn analyse_projects(projects: SegQueue<Project>, settings: &Args) -> Vec<PathBuf> {
     let filtered = if settings.all {
         output::println(
             "Skip",
@@ -35,6 +35,7 @@ pub fn analyse_projects(projects: SegQueue<Project>, settings: &Settings) -> Vec
 
     let mut dirs = Vec::new();
     while let Ok(project) = filtered.pop() {
+        output::println("ProjectType:", Color::Cyan, &project.typ());
         dirs.append(&mut project.into_cleanable_dirs());
     }
 

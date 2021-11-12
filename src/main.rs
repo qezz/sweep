@@ -3,8 +3,9 @@ use std::io::{stdin, stdout, Write};
 
 use yansi::{Color, Paint};
 
+use crate::config::read_config_from_file;
 use crate::project::Project;
-use crate::settings::{Settings, SettingsError};
+use crate::settings::{Args, ArgsError};
 
 mod output;
 mod project;
@@ -14,6 +15,7 @@ mod swpfile;
 mod analyse_projects;
 mod discover_projects;
 mod utils;
+pub mod config;
 
 fn main() {
     if cfg!(windows) && !Paint::enable_windows_ascii() {
@@ -26,11 +28,11 @@ fn main() {
         Paint::new(env!("CARGO_PKG_VERSION")).dimmed()
     );
 
-    let settings = match Settings::get() {
+    let settings = match Args::get() {
         Ok(settings) => settings,
         Err(err) => {
             match err {
-                SettingsError::InvalidPath(path) => {
+                ArgsError::InvalidPath(path) => {
                     output::error(format!("Invalid path: {}", path.to_str().unwrap_or("")))
                 }
             };
@@ -39,12 +41,15 @@ fn main() {
         }
     };
 
+    let config = read_config_from_file(settings.clone().config).expect("cannot parse config");
+    println!("config: {:#?}", config);
+
     for path in &settings.paths {
         output::println("Path", Color::Blue, path.to_str().unwrap_or(""));
     }
 
     // Discover cleanable projects
-    let cleanables = match discover_projects::discover_projects(&settings) {
+    let cleanables = match discover_projects::discover_projects(&settings, &config) {
         Some(cleanables) => cleanables,
         None => {
             output::println_plain(Some(Color::Yellow), "No sweepable projects found");
