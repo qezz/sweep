@@ -36,8 +36,6 @@ pub fn detect_cleanable_project(path: &Path, config: &Config) -> Option<Project>
 
     // Check config entries
     for entry in &config.entries {
-        dbg!(entry);
-
         if exists_in_path(path, &entry.trigger) {
             is_project = true;
             project.with_type(entry.name.clone());
@@ -59,6 +57,32 @@ pub fn detect_cleanable_project(path: &Path, config: &Config) -> Option<Project>
 mod test {
     use super::detect_cleanable_project;
     use crate::utils::test_utils;
+
+    use crate::config::{Config, Entry};
+
+    fn simple_config() -> Config {
+        Config {
+            entries: vec![
+                Entry {
+                    name: "rust".into(),
+                    trigger: "Cargo.toml".into(),
+                    disposables: ["target"].iter().map(|&s| s.into()).collect::<Vec<String>>(),
+                },
+                Entry {
+                    name: "npm".into(),
+                    trigger: "package.json".into(),
+                    disposables: ["node_modules", ".cache", "build", "dist"]
+                        .iter().map(|&s| s.into()).collect::<Vec<String>>(),
+                },
+                Entry {
+                    name: "java/pom".into(),
+                    trigger: "pom.xml".into(),
+                    disposables: ["target", ".gradle", "build"]
+                        .iter().map(|&s| s.into()).collect::<Vec<String>>(),
+                }
+            ],
+        }
+    }
 
     /// Creates the provided files and directories in a temporary directory,
     /// then runs `detect_cleanable_project` on that directory and verifies
@@ -88,7 +112,8 @@ mod test {
 				$(test_utils::create_dir(dir, $d);)*
 				$(test_utils::create_file(dir, $f);)*
 
-				let project = detect_cleanable_project(&dir).expect("No project detected");
+                                let config = simple_config();
+				let project = detect_cleanable_project(&dir, &config).expect("No project detected");
 				$(assert!(project.is_cleanable_dir(&dir.join($c)));)*
 
 				assert_eq!(project.into_cleanable_dirs().len(), {
@@ -151,9 +176,10 @@ mod test {
 
     #[test]
     fn empty_dir() {
+        let config = simple_config();
         test_utils::with_temp_dir(|dir| {
             assert!(
-                detect_cleanable_project(&dir).is_none(),
+                detect_cleanable_project(&dir, &config).is_none(),
                 "Project detected in empty directory"
             );
         });
@@ -161,13 +187,14 @@ mod test {
 
     #[test]
     fn no_project() {
+        let config = simple_config();
         test_utils::with_temp_dir(|dir| {
             test_utils::create_dir(dir, "not_a_project");
             test_utils::create_dir(dir, "another_test_directory");
             test_utils::create_file(dir, "no_project_here.txt");
 
             assert!(
-                detect_cleanable_project(&dir).is_none(),
+                detect_cleanable_project(&dir, &config).is_none(),
                 "Project detected in unrelated directory"
             );
         });

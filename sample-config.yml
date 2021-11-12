@@ -1,0 +1,15 @@
+version: 1
+
+entries:
+  - name: "test entry"
+    trigger: "BLAH.toml"
+    disposables: ["blah-target"]
+  - name: "rust"
+    trigger: "Cargo.toml"
+    disposables: ["target"]
+  - name: "npm"
+    trigger: "package.json"
+    disposables: ["node_modules", ".cache", "build", "dist"]
+  - name: "java/pom"
+    trigger: "pom.xml"
+    disposables: ["target", ".gradle", "build"]

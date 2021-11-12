@@ -114,6 +114,7 @@ mod tests {
             all: false,
             ignore: None,
             force: false,
+            config: "sample-config.yml".into(),
         };
 
         assert!(
@@ -130,6 +131,7 @@ mod tests {
             all: false,
             ignore: None,
             force: false,
+            config: "sample-config.yml".into(),
         };
 
         let validate = settings.validate();
@@ -151,6 +153,7 @@ mod tests {
             all: false,
             ignore: Some(Regex::new("src").unwrap()),
             force: false,
+            config: "sample-config.yml".into(),
         };
 
         assert_eq!(settings.is_path_ignored(Path::new("./src")), true);
