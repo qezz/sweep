@@ -10,11 +10,48 @@ Sweep (`swp`) finds old projects that haven't been changed in more than a month.
 
 ![Screenshot](readme_screenshot.png)
 
-## How to use
-Head on over to [the documentation](https://sweep.woubuc.be).
+## Changes
 
-## Contributions welcome
-This project welcomes contributions of any kind, whether you want to add new features, improve the documentation or just want to give some feedback.
+This version of sweep works with a config file rather than with the
+predefined set of rules.
+
+Sample config:
+
+```yaml
+
+version: 1
+
+entries:
+  - name: "rust"
+    trigger: "Cargo.toml"
+    disposables: ["target"]
+  - name: "npm"
+    trigger: "package.json"
+    disposables: ["node_modules", ".cache", "build", "dist"]
+  - name: "java/pom"
+    trigger: "pom.xml"
+    disposables: ["target", ".gradle", "build"]
+```
+
+At the moment `config` is a required parameter. I'm looking forward to
+using some default config somewhere in user local files
+(e.g. `~/.config/` on linux)
+
+## How to use
+
+TL;DR:
+
+```
+cargo run -- --config sample-config.yml --all ~/
+```
+
+Yep, it's not very convenient so far.
+
+For the original documentation check [this page](https://sweep.woubuc.be).
+
+## Contributions
+
+This project is a PoC. Please contribute to the original project.
 
 ## License
 Sweep is published under the MIT license. See
